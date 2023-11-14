@@ -1,24 +1,24 @@
 %let rc=%sysfunc(dlgcdir('/home/u63548322/SantiniFiles'));
 options nodate pageno=1;
-ods pdf file='Two Sample Exercise Homework.pdf';
+ods pdf file='Santini_Two_Sample_Exercise_HW.pdf';
 
 data races;
-set ipedsdat.graduationextended;
-by unitid;
-cohortW = lag1(grwhitt);
-cohortNW = lag1(sum(graiant,grasiat,grbkaat,grhispt,grnhpit,gr2mort,grunknt));
-if last.unitid and last.unitid ne first.unitid;
-rateW = grwhitt/cohortw;
-rateNW = sum(graiant,grasiat,grbkaat,grhispt,grnhpit,gr2mort,grunknt)/cohortNW;
-output;
-format rateW rateNW percentn8.2;
-keep unitid rateW rateNW cohortW cohortNW;
+	set ipedsdat.graduationextended;
+	by unitid;
+	cohortWhite = lag1(grwhitt);
+	cohortOther = lag1(graiant + grasiat + grbkaat + grhispt + grnhpit + gr2mort);
+	if last.unitid and last.unitid ne first.unitid;
+	rateWhite = grwhitt/cohortWhite;
+	rateOther = (graiant + grasiat + grbkaat + grhispt + grnhpit + gr2mort)/cohortOther;
+	output;
+	format rateWhite rateOther percentn8.2;
+	keep unitid rateWhite rateOther cohortWhite cohortOther;
 run;
 
 ods select none;
 ods graphics off;
 proc ttest data=races;
-paired ratew*ratenw;
+paired rateWhite*rateOther;
 ods output ttests=test1a conflimits=ci1a;
 run;
 
@@ -56,7 +56,7 @@ run;
 proc odstext;
 p 
 'The difference between graduation rates is highly significant (p-value < 0.0001), with graduation rates for whites being higher
- by 8.66% +/- 0.79% (with 95% confidence)'
+ by 9.091% +/- 0.81% (with 95% confidence)'
       / style=[font_size=12pt];
 run;
 
@@ -64,8 +64,8 @@ run;
 ods select none;
 ods graphics off;
 proc ttest data=races;
-  where sum(cohortw, cohortnw) ge 500;
-  paired ratew*ratenw;
+  where (cohortWhite + cohortOther) ge 500;
+  paired rateWhite*rateOther;
   ods output ttests=test1c conflimits=ci1c;
 run;
 
@@ -83,7 +83,8 @@ h
       / style=[font_size=12pt];
 p
 'For the average graduation rate across institutions with an incoming cohort of at least 500 individuals, the following table
- gives a confidence interval and test for a difference between whites and nonwhites in average graduation rates.'
+ gives a confidence interval and test for a difference between white students and nonwhite students in 
+ average graduation rates.'
       / style=[font_size=12pt];
 run;
 
@@ -102,7 +103,7 @@ run;
 proc odstext;
 p
 'The difference between graduation rates is highly significant (p-value < 0.0001), with graduation rates for whites being higher
- by 7.58%% +/- 0.66% (with 95% confidence)'
+ by 7.813% +/- 0.68% (with 95% confidence)'
       / style=[font_size=12pt];
 run;
 
@@ -125,22 +126,22 @@ h
 p 
 'For institutions with an incoming cohort of at least 500 people, the following table
  gives a test for the difference in proportion of instituitions with graduation rates
- of 60% or more for whites and nonwhites.'
+ of 60% or more for white students and nonwhite students.'
       / style=[font_size=12pt];
 run;
 
-proc freq data=races(rename=(rateW='Rate for Whites'n
-                                rateNW='Rate for NonWhites'n));
-  where sum(cohortw, cohortnw) ge 500;
-  table 'Rate for Whites'n*'Rate for NonWhites'n / agree norow nocol;
-  format 'Rate for Whites'n 'Rate for NonWhites'n atLeastSixty.;
+proc freq data=races(rename=(rateWhite='Rate for White'n
+                                rateOther='Rate for Other'n));
+  where (cohortWhite + cohortOther) ge 500;
+  table 'Rate for White'n*'Rate for Other'n / agree norow nocol;
+  format 'Rate for White'n 'Rate for Other'n atLeastSixty.;
   ods select crosstabfreqs McNemarsTest;
 run;
 
 proc odstext;
 p 
-'The difference in the proportion of institutions with graduation rates of over 60% for whites vs nonwhites is highly significant
- (p-value < 0.0001), the estimated difference is 22.12% (64.37% - 42.25%)'
+'The difference in the proportion of institutions with graduation rates of over 60% for white students 
+ vs nonwhite students is highly significant (p-value < 0.0001), the estimated difference is 22.08% (64.36% - 42.28%) '
       / style=[font_size=12pt];
 run;
 
@@ -150,14 +151,14 @@ proc format cntlin=ipedsdat.ipedsformats;
 run;
 
 data rates;
-set ipedsdat.graduation;
-by unitid;
-incoming = lag1(total);
-if last.unitid and last.unitid ne first.unitid;
-gradrate = total/incoming;
-output;
-format gradrate percentn8.2;
-keep unitid incoming gradrate;
+	set ipedsdat.graduation;
+	by unitid;
+	incoming = lag1(total);
+	if last.unitid and last.unitid ne first.unitid;
+	gradrate = total/incoming;
+	output;
+	format gradrate percentn8.2;
+	keep unitid incoming gradrate;
 run;
 
 proc format;
@@ -168,12 +169,12 @@ proc format;
 run;
 
 data doctoral(keep=unitid incoming gradrate hloffer);
-merge rates(in=inrates) ipedsdat.characteristics;
-by unitid;
-if hloffer = 9 then hloffer = 1;
-else hloffer = 0;
-if inrates then output;
-format hloffer hloffer.;
+	merge rates(in=inrates) ipedsdat.characteristics;
+	by unitid;
+	if hloffer = 9 then hloffer = 1;
+	else hloffer = 0;
+	if inrates then output;
+	format hloffer hloffer.;
 run;
 
 proc ttest data=doctoral order=formatted;
@@ -183,12 +184,12 @@ proc ttest data=doctoral order=formatted;
 run;
 
 proc sql;
-  create table use2 as
-  select *
-  from CI2 inner join tests2 
-    on ci2.method eq tests2.method
-  where ci2.method contains 'Satt'
-  ;
+  	create table use2 as
+  	select *
+  	from CI2 inner join tests2 
+    	on ci2.method eq tests2.method
+  	where ci2.method contains 'Satt'
+  	;
 quit;
 
 
@@ -272,8 +273,10 @@ run;
 
 proc odstext;
 p 
-'The difference between graduation rates is highly significant (p-value < 0.0001), with graduation rates for doctoral institutions
- being higher by 3.27% +/- 2.96% (with 95% confidence)'
+'The difference between graduation rates is insignificant (p-value = 0.0304), we can conclude that
+ there is a significant difference (p-value = 0.0304) in graduation rates of institutions that offer 
+ doctoral degrees and those that do not with incoming cohort sizes of at least 500 people by
+ 3.27% +/- 2.96% .'
       / style=[font_size=12pt];
 run;
 
@@ -330,8 +333,8 @@ run;
 proc odstext;
 p 
 'The difference in the proportion of doctoral vs. non doctoral institutions with graduation rates of over 70% and incoming cohort of at least 500 people
- is insignificant (p-value = 0.7335), we cannot conclude there is a difference in graduation rates of institutions that offer doctoral degrees and those that do not
- with incoming cohort sizes of at least 500 people'
+ is insignificant (p-value = 0.7335), so we cannot conclude there is a difference in graduation rates of institutions that offer doctoral degrees and those that do not
+ with incoming cohort sizes of at least 500 people and graduation rates of over 70%.'
       / style=[font_size=12pt];
 run;
 ods pdf close;
