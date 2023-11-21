@@ -1,6 +1,4 @@
-<div style="text-align:center">
-    <img src=”https://raw.githubusercontent.com/jonsantini/uncwdatascience/main/md-banner.png" alt="Image" />
-</div>
+![Banner](https://raw.githubusercontent.com/jonsantini/uncwdatascience/main/md-banner.png "My banner")
 
 # Class of 2024
 ## Jon Santini
